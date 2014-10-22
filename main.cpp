@@ -1,12 +1,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <cerrno>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/types.h>
-#include <sys/param.h>
 #include <pwd.h>
+#include <string>
+#include <sstream>
 
 #include "x.hpp"
 #include "im.hpp"
@@ -104,14 +104,10 @@ int main( int argc, char** argv ) {
     std::string file = "";
     // If we don't have a file, default to writing to the home directory.
     if ( options.inputs_num <= 0 ) {
-        char currentdir[MAXPATHLEN];
+        char currentdir[512];
         // FIXME: getcwd is fundamentally broken, switch it with a C++ equivalent that won't ever have
         // buffer sizing issues.
-        char* error = getcwd( currentdir, MAXPATHLEN );
-        if ( error == NULL ) {
-            fprintf( stderr, "Failed to get current working directory!\n" );
-            return errno;
-        }
+        getcwd( currentdir, 512 );
         file = currentdir;
         std::string result;
         err = exec( "date +%F-%T", &result );
@@ -132,20 +128,20 @@ int main( int argc, char** argv ) {
     if ( options.select_flag ) {
         // Execute slop with any options given.
         std::string result;
-        char slopcommand[ 255 ];
-        sprintf( slopcommand, "slop %s -b %i -p %i -t %i -g %i -c %s %s --min=%i --max=%i %s",
-                 options.nokeyboard_flag ? "--nokeyboard" : "",
-                 options.bordersize_arg,
-                 options.padding_arg,
-                 options.tolerance_arg,
-                 options.gracetime_arg,
-                 options.color_arg,
-                 options.nodecorations_flag ? "-n" : "",
-                 options.min_arg,
-                 options.max_arg,
-                 options.highlight_flag ? "-l" : "" );
+        std::stringstream slopcommand;
+        slopcommand << "slop ";
+        slopcommand << options.nokeyboard_flag ? "--nokeyboard" : "";
+        slopcommand << " -b " << options.bordersize_arg;
+        slopcommand << " -p " << options.padding_arg;
+        slopcommand << " -t " << options.tolerance_arg;
+        slopcommand << " -g " << options.gracetime_arg;
+        slopcommand << " -c " << options.color_arg;
+        slopcommand << options.nodecorations_flag ? "-n" : "";
+        slopcommand << " --min=" << options.min_arg;
+        slopcommand << " --max=" << options.max_arg;
+        slopcommand << options.highlight_flag ? "-l" : "";
 
-        err = exec( slopcommand, &result );
+        err = exec( slopcommand.str(), &result );
         if ( err ) {
             fprintf( stderr, "slop failed to run, canceling screenshot. Is slop installed?\n" );
             cmdline_parser_free( &options );
