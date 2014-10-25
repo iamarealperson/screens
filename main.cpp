@@ -136,7 +136,7 @@ int slop( gengetopt_args_info options, int* x, int* y, int* w, int* h, Window* w
         find = result.find( "=" );
     }
     Window test = None;
-    int num = sscanf( result.c_str(), "X %i\n Y %i\n W %i\n H %i\nG %*s\nID %lu", x, y, w, h, &test );
+    int num = sscanf( result.c_str(), "X %i\n Y %i\n W %i\n H %i\nG %*s\nID %i", x, y, w, h, &test );
     if ( num != 5 || ( *w == 0 && *h == 0 ) ) {
         return 1;
     }
@@ -191,7 +191,7 @@ int main( int argc, char** argv ) {
     } else if ( options.geometry_given ) {
         err = parseGeometry( options.geometry_arg, &x, &y, &w, &h );
         if ( err ) {
-            fprintf( stderr, "Failed to parse geometry %s, should be in format WxH+X+Y!\n", options.geometry_arg );
+            fprintf( stderr, "Failed to parse geometry %s, should be in format WxH+X+Y!\n" );
             cmdline_parser_free( &options );
             return 1;
         }
@@ -201,9 +201,12 @@ int main( int argc, char** argv ) {
     Window window = xengine->m_root;
     if ( options.windowid_given ) {
         window = (Window)options.windowid_arg;
-        // Since we have a window we need to offset our x and y geometry (we may not even be using it).
-        Window junk;
-        XTranslateCoordinates( xengine->m_display, xengine->m_root, window, x, y, &x, &y, &junk );
+        // Since we have a window we need to turn root coords into our local window coords.
+        // but only if the user wants us to.
+        if ( !options.localize_flag ) {
+            Window junk;
+            XTranslateCoordinates( xengine->m_display, xengine->m_root, window, x, y, &x, &y, &junk );
+        }
     }
     // Get our file name
     std::string file = "";
